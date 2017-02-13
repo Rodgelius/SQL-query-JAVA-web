@@ -5,5 +5,20 @@
          http://xmlns.jcp.org/xml/ns/javaee
          http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
          version="3.1">
-
+<servlet>
+    <servlet-name>maincontroller</servlet-name>
+    <servlet-class>dgava.controller.MainController</servlet-class>
+</servlet>
+    <servlet-mapping>
+    <servlet-name>maincontroller</servlet-name>
+    <url-pattern>/maincontroller</url-pattern>
+    </servlet-mapping>
+    <servlet>
+        <servlet-name>export</servlet-name>
+        <servlet-class>dgava.controller.Export</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>export</servlet-name>
+        <url-pattern>/export</url-pattern>
+    </servlet-mapping>
 </web-app>

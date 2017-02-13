@@ -1,49 +1,41 @@
 package dgava.controller;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by user on 08.02.17.
- */
-public class MainController {
+public class MainController extends HttpServlet{
 
-//    private static final String url = "jdbc:mysql://zabbix2.cod.sz.rt.ru:3306/zabbix";
-//    private static final String user = "read";
-//    private static final String password = "654321";
     private static Connection con;
     private static Statement stmt;
     private static ResultSet rs;
     private String query;
-    String timetotxt = "2017-01-30 13.00.00";
-    String timefromtxt = "2017-01-10 13.00.00";
-    String textfield = "bis";
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH.mm.ss");
+    private static DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH.mm.ss");
+    public static String timeFromTxt = LocalDateTime.now().minusDays(3).format(formatter).toString();
+    public static String timeToTxt = LocalDateTime.now().format(formatter).toString();
+    public static String name = "%";
 
+    private static List<Row> list = new ArrayList<>();
 
-    private List list;
-
-    public MainController()  {
-        list = new ArrayList();
+    public List getList() {
 
         try {
             DriverManager.registerDriver(new org.mariadb.jdbc.Driver());
             con = DriverManager.getConnection("jdbc:mysql://zabbix2.cod.sz.rt.ru:3306/zabbix", "read", "");
             stmt = con.createStatement();
 
-System.out.print("");
-//            if (!timefrom.getValue().equals(null))
-//                timefromtxt = timefrom.getDateTimeValue().format(formatter);         //if timefrom not blank
-//            if (!timeto.getValue().equals(null))
-//                timetotxt = timeto.getDateTimeValue().format(formatter);               //if timeto not blank
-//            if (LocalDateTime.parse(timefromtxt, formatter).isAfter(LocalDateTime.parse(timetotxt, formatter))) {        // timefrom <-> timeto
-//                String t = timefromtxt;
-//                timefromtxt = timetotxt;
-//                timetotxt = t;
-//            }
+            if (LocalDateTime.parse(timeFromTxt, formatter).isAfter(LocalDateTime.parse(timeToTxt, formatter))) {   // timefrom <-> timeto
+                String t = timeFromTxt;
+                timeFromTxt = timeToTxt;
+                timeToTxt = t;
+            }
             query = "SELECT events.eventid AS id, " +
                     "from_unixtime( clock, '%Y-%m-%d %H.%i.%s' ) AS event_time, " +
                     "triggers.description AS 'trigger', " +
@@ -62,52 +54,44 @@ System.out.print("");
                     "interface.hostid = hosts.hostid AND " +
                     "events.source = 0 AND " +
                     "interface.main = 1 AND " +
-                    "hosts.name LIKE '%%' AND " +
+                    "hosts.name LIKE '%" + name + "%' AND " +
                     "events.clock " +
-                    "BETWEEN UNIX_TIMESTAMP( '2017-01-10 13.00.00' ) AND " +
-                    "UNIX_TIMESTAMP( '2017-01-30 13.00.00' ) " +
+                    "BETWEEN UNIX_TIMESTAMP( '" + timeFromTxt + "' ) AND " +
+                    "UNIX_TIMESTAMP( '" + timeToTxt + "' ) " +
                     "ORDER BY id ASC LIMIT 15;";
+
             rs = stmt.executeQuery(query);
+            list.clear();
 
-            System.out.println(textfield);
-            System.out.println(timefromtxt);
-            System.out.println(timetotxt);
-            System.out.println("отправил запрос, собираю данные");
-            System.out.println(query);
-
-while(rs.next()) {
-    String col1 = rs.getString("id");
-    String col2 = rs.getString("event_time");
-    String col3 = rs.getString("name");
-    String col4 = rs.getString("ip");
-    String col5 = rs.getString("trigger");
-    String col6 = rs.getString("item");
-    String col7 = rs.getString("status");
-    String col8 = rs.getString("priority");
-
-    System.out.println(col1 + col2);
-    System.out.println("добавляю в список");
-
-    this.list.add(new Row(col1.trim(), col2.trim(), col3.trim(), col4.trim(), col5.trim(), col6.trim(), col7.trim(), col8.trim()));
-
-}
+            while(rs.next()) {                                              // Считываем все доступные строки
+                String col1 = rs.getString("id");
+                String col2 = rs.getString("event_time");
+                String col3 = rs.getString("name");
+                String col4 = rs.getString("ip");
+                String col5 = rs.getString("trigger");
+                String col6 = rs.getString("item");
+                String col7 = rs.getString("status");
+                String col8 = rs.getString("priority");
+                list.add(new Row(col1.trim(), col2.trim(), col3.trim(), col4.trim(), col5.trim(), col6.trim(), col7.trim(), col8.trim())); // Добавляем очередную строку в list
+            }
+            Export.setList(list);
         }
         catch (SQLException e){
-            try {
-                rs = stmt.executeQuery("select * from hosts limit 1;");
-                System.out.println("!попытка вызвать простой запрос");
-            } catch (SQLException e1) {
-                System.out.println("!что-то не так c сервером");
-            }
-            System.out.println("!что-то не так в запросе");
+                System.out.println("!что-то глюкануло");
+                return getList();
         }
-
-//        System.out.print(list.get(0));
-    }
-
-    public List getList() {
-
-
         return list;
     }
+
+    private static void setName(String hostname) { name = hostname; }
+    private static void setTimeFromTxt(String timeFrom) { timeFromTxt = timeFrom; }
+    private static void setTimeToTxt(String timeTo) { timeToTxt = timeTo; }
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        MainController.setName(request.getParameter("host"));
+        MainController.setTimeFromTxt(request.getParameter("from"));
+        MainController.setTimeToTxt(request.getParameter("to"));
+        response.sendRedirect("http://localhost:8080");
+    }
 }
+
