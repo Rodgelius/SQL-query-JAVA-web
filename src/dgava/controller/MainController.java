@@ -28,7 +28,7 @@ public class MainController extends HttpServlet{
 
         try {
             DriverManager.registerDriver(new org.mariadb.jdbc.Driver());
-            con = DriverManager.getConnection("jdbc:mysql://zabbix2.cod.sz.rt.ru:3306/zabbix", "read", "");
+            con = DriverManager.getConnection("jdbc:mysql://zabbix2:3306/zabbix", "read", "");
             stmt = con.createStatement();
 
             if (LocalDateTime.parse(timeFromTxt, formatter).isAfter(LocalDateTime.parse(timeToTxt, formatter))) {   // timefrom <-> timeto
